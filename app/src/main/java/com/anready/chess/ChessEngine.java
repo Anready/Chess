@@ -7,24 +7,36 @@ import java.util.List;
 import java.util.Map;
 
 public class ChessEngine {
+//    public byte[][] board = {
+//            /*0*/{-5, -2, -3, -9, -8, -3, -2, -5},
+//            /*1*/{-1, -1, -1, -1, -1, -1, -1, -1},
+//            /*2*/{+0, +0, +0, +0, +0, +0, +0, +0},
+//            /*3*/{+0, +0, +0, +0, +0, +0, +0, +0},
+//            /*4*/{+0, +0, +0, +0, +0, +0, +0, +0},
+//            /*5*/{+0, +0, +0, +0, +0, +0, +0, +0},
+//            /*6*/{+1, +1, +1, +1, +1, +1, +1, +1},
+//            /*7*/{+5, +2, +3, +9, +8, +3, +2, +5}
+//            //_____0___1___2___3___4___5___6___7__\\
+//    };
+
     public byte[][] board = {
-            /*0*/{-5, -2, -3, -9, -8, -3, -2, -5},
-            /*1*/{-1, -1, -1, -1, -1, -1, -1, -1},
+            /*0*/{-5, +0, +0, -8, +0, -3, -2, -5},
+            /*1*/{-1, +5, -1, -2, -1, -9, -1, -1},
             /*2*/{+0, +0, +0, +0, +0, +0, +0, +0},
-            /*3*/{+0, +0, +0, +0, +0, +0, +0, +0},
-            /*4*/{+0, +0, +0, +0, +0, +0, +0, +0},
-            /*5*/{+0, +0, +0, +0, +0, +0, +0, +0},
-            /*6*/{+1, +1, +1, +1, +1, +1, +1, +1},
-            /*7*/{+5, +2, +3, +9, +8, +3, +2, +5}
+            /*3*/{+0, +0, +0, +0, +0, +0, +3, +0},
+            /*4*/{+0, +0, +0, +1, +0, +0, +0, +0},
+            /*5*/{+0, +0, +0, +0, +1, +0, +1, +3},
+            /*6*/{+1, +0, +0, +0, +8, +1, +0, +1},
+            /*7*/{+0, +0, +0, +0, +0, +0, +0, +0}
             //_____0___1___2___3___4___5___6___7__\\
     };
 
     List<byte[]> history = new ArrayList<>();
     byte[] lastMove = new byte[6];
-    boolean isWhiteMove = true;
+    boolean isWhiteMove = false;
 
-    byte[] whiteKing = {7,4}; // Y; X
-    byte[] blackKing = {0,4}; // Y; X;
+    byte[] whiteKing = {6,4}; // Y; X
+    byte[] blackKing = {0,3}; // Y; X;
 
     public Map<byte[], List<byte[]>> allMoves;
 
@@ -397,6 +409,22 @@ public class ChessEngine {
                     continue;
                 }
 
+                if (kingX == 6 || kingX == 2) {
+                    byte tempX = (byte) (kingX == 2 ? kingX + 1 : kingX - 1);
+
+                    board[key[0]][tempX] = rawPiece;
+                    board[y][x] = 0;
+
+                    if (isCheck(kingY, tempX)) {
+                        board[y][x] = rawPiece;
+                        board[key[0]][tempX] = oldValue;
+                        iterator.remove();
+                        continue;
+                    } else {
+                        board[key[0]][tempX] = oldValue;
+                        board[y][x] = rawPiece;
+                    }
+                }
                 if (isCheck(kingY, kingX)) {
                     board[y][x] = rawPiece;
                     board[key[0]][key[1]] = oldValue;

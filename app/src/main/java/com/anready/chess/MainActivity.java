@@ -226,6 +226,14 @@ public class MainActivity extends AppCompatActivity {
             removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
         }
 
+        if (lastMove[0] == 8) {
+            chessEngine.whiteKing[0] = lastMove[1];
+            chessEngine.whiteKing[1] = lastMove[2];
+        } else if (lastMove[0] == -8) {
+            chessEngine.blackKing[0] = lastMove[1];
+            chessEngine.blackKing[1] = lastMove[2];
+        }
+
         updateCell(lastMove[1], lastMove[2]);
         updateCell(lastMove[3], lastMove[4]);
 
