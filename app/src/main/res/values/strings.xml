@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Chess</string>
+    <string name="queen">Queen</string>
+    <string name="knight">Knight</string>
+    <string name="bishop">Bishop</string>
+    <string name="rook">Rook</string>
+</resources>
