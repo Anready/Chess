@@ -136,9 +136,6 @@ public class MainActivity extends AppCompatActivity {
                             updateCell(chessEngine.blackKing[0], chessEngine.blackKing[1], -2, Color.RED);
 
                             removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
-                            addMoveToHistory(chessEngine.board[currentSelection[0]][currentSelection[1]],
-                                    currentSelection[0], currentSelection[1], clickedY, clickedX,
-                                    chessEngine.board[clickedY][clickedX]);
 
                             if (Math.abs(chessEngine.board[currentSelection[0]][currentSelection[1]]) == 8 && Math.abs(clickedX - currentSelection[1]) == 2) {
                                 if (clickedX == 2) {
@@ -159,6 +156,10 @@ public class MainActivity extends AppCompatActivity {
                                     addMoveToHistory(chessEngine.board[clickedY][5], clickedY, (byte) 7, clickedY, (byte) 5, (byte) 0);
                                 }
                             }
+
+                            addMoveToHistory(chessEngine.board[currentSelection[0]][currentSelection[1]],
+                                    currentSelection[0], currentSelection[1], clickedY, clickedX,
+                                    chessEngine.board[clickedY][clickedX]);
 
                             if (Math.abs(chessEngine.board[currentSelection[0]][currentSelection[1]]) == 1 && Math.abs(currentSelection[1] - clickedX) == 1) {
                                 if (chessEngine.board[clickedY][clickedX] == 0) {
