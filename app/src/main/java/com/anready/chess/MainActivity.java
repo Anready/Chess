@@ -136,29 +136,27 @@ public class MainActivity extends AppCompatActivity {
                             updateCell(chessEngine.blackKing[0], chessEngine.blackKing[1], -2, Color.RED);
 
                             removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
-
-                            byte[] historyRecord = new byte[6];
-                            historyRecord[0] = chessEngine.board[currentSelection[0]][currentSelection[1]];
-                            historyRecord[1] = currentSelection[0];
-                            historyRecord[2] = currentSelection[1];
-                            historyRecord[3] = clickedY;
-                            historyRecord[4] = clickedX;
-                            historyRecord[5] = chessEngine.board[clickedY][clickedX];
-
-                            chessEngine.history.add(historyRecord);
-                            chessEngine.lastMove = historyRecord;
+                            addMoveToHistory(chessEngine.board[currentSelection[0]][currentSelection[1]],
+                                    currentSelection[0], currentSelection[1], clickedY, clickedX,
+                                    chessEngine.board[clickedY][clickedX]);
 
                             if (Math.abs(chessEngine.board[currentSelection[0]][currentSelection[1]]) == 8 && Math.abs(clickedX - currentSelection[1]) == 2) {
                                 if (clickedX == 2) {
                                     chessEngine.board[clickedY][0] = 0;
                                     chessEngine.board[clickedY][3] = (byte)(5 * chessEngine.isNeg(chessEngine.board[currentSelection[0]][currentSelection[1]]));
+
                                     updateCell(clickedY, (byte) 0);
                                     updateCell(clickedY, (byte) 3);
+
+                                    addMoveToHistory(chessEngine.board[clickedY][3], clickedY, (byte) 0, clickedY, (byte) 3, (byte) 0);
                                 } else if (clickedX == 6) {
                                     chessEngine.board[clickedY][7] = 0;
                                     chessEngine.board[clickedY][5] = (byte)(5 * chessEngine.isNeg(chessEngine.board[currentSelection[0]][currentSelection[1]]));
+
                                     updateCell(clickedY, (byte) 7);
                                     updateCell(clickedY, (byte) 5);
+
+                                    addMoveToHistory(chessEngine.board[clickedY][5], clickedY, (byte) 7, clickedY, (byte) 5, (byte) 0);
                                 }
                             }
 
@@ -213,6 +211,18 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void addMoveToHistory(byte figureForMove, byte y1, byte x1, byte y2, byte x2, byte figureReplaced) {
+        byte[] historyRecord = new byte[6];
+        historyRecord[0] = figureForMove;
+        historyRecord[1] = y1;
+        historyRecord[2] = x1;
+        historyRecord[3] = y2;
+        historyRecord[4] = x2;
+        historyRecord[5] = figureReplaced;
+        chessEngine.history.add(historyRecord);
+        chessEngine.lastMove = historyRecord;
+    }
+
     private void cancelMove(Button whiteButton, Button blackButton) {
         if (chessEngine.history.isEmpty()) {
             return;
@@ -224,6 +234,21 @@ public class MainActivity extends AppCompatActivity {
 
         if (currentSelection[0] != -1 && currentSelection[1] != -1) {
             removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
+        }
+
+        if (Math.abs(lastMove[0]) == 8) {
+            if (Math.abs(lastMove[2]-lastMove[4]) == 2) {
+                byte[] lastMove1 = chessEngine.history.remove(chessEngine.history.size() - 1);
+                chessEngine.board[lastMove1[1]][lastMove1[2]] = lastMove1[0];
+                chessEngine.board[lastMove1[3]][lastMove1[4]] = lastMove1[5];
+
+                if (currentSelection[0] != -1 && currentSelection[1] != -1) {
+                    removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
+                }
+
+                updateCell(lastMove1[1], lastMove1[2]);
+                updateCell(lastMove1[3], lastMove1[4]);
+            }
         }
 
         if (lastMove[0] == 8) {
@@ -245,6 +270,8 @@ public class MainActivity extends AppCompatActivity {
 
         updateCell(chessEngine.whiteKing[0], chessEngine.whiteKing[1], -2, Color.RED);
         updateCell(chessEngine.blackKing[0], chessEngine.blackKing[1], -2, Color.RED);
+
+        isGameFinished = false;
         drawOrMateCheck();
     }
 
@@ -356,6 +383,15 @@ public class MainActivity extends AppCompatActivity {
             updateCell(clickedY, clickedX, -1, Color.YELLOW);
         } else {
             updateCell(clickedY, clickedX, -2, Color.YELLOW);
+        }
+    }
+
+    /// To debug board
+    private void updateCell() {
+        for (byte y = 0; y < 8; y++) {
+            for (byte x = 0; x < 8; x++) {
+                updateCell(y, x);
+            }
         }
     }
 
