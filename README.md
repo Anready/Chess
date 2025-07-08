@@ -83,14 +83,14 @@ The project is written in Java using Android SDK. Main components:
 To debug board (full synchronizing with real matrix) replace all updateCell(byte, byte) (in ChessEngine) with updateCell() and add this code to ChessEngine:
 
 ```java
-    /// To debug board
-    private void updateCell() {
-        for (byte y = 0; y < 8; y++) {
-            for (byte x = 0; x < 8; x++) {
-                callback.updateCell(y, x);
-            }
+/// To debug board
+private void updateCell() {
+    for (byte y = 0; y < 8; y++) {
+        for (byte x = 0; x < 8; x++) {
+            callback.updateCell(y, x);
         }
     }
+}
 ```
 
 ## License
