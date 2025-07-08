@@ -67,8 +67,8 @@ public class MainActivity extends AppCompatActivity implements ChessEngine.Chess
         whiteButton = findViewById(R.id.button);
         blackButton = findViewById(R.id.button2);
 
-        whiteButton.setOnClickListener(v -> cancelMove());
-        blackButton.setOnClickListener(v -> cancelMove());
+        whiteButton.setOnClickListener(v -> chessEngine.cancelMove(currentSelection));
+        blackButton.setOnClickListener(v -> chessEngine.cancelMove(currentSelection));
 
         chessEngine = new ChessEngine(this);
 
@@ -113,7 +113,7 @@ public class MainActivity extends AppCompatActivity implements ChessEngine.Chess
                     byte clickedY = pos[0];
                     byte clickedX = pos[1];
 
-                    if (isGameFinished) {
+                    if (chessEngine.isGameFinished) {
                         return;
                     }
 
@@ -137,58 +137,6 @@ public class MainActivity extends AppCompatActivity implements ChessEngine.Chess
                 boardGrid.addView(square);
             }
         }
-    }
-
-    private void cancelMove() {
-        if (chessEngine.history.isEmpty()) {
-            return;
-        }
-
-        byte[] lastMove = chessEngine.history.remove(chessEngine.history.size() - 1);
-        chessEngine.board[lastMove[1]][lastMove[2]] = lastMove[0];
-        chessEngine.board[lastMove[3]][lastMove[4]] = lastMove[5];
-
-        if (currentSelection[0] != -1 && currentSelection[1] != -1) {
-            chessEngine.removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
-        }
-
-        if (Math.abs(lastMove[0]) == 8) {
-            if (Math.abs(lastMove[2]-lastMove[4]) == 2) {
-                byte[] lastMove1 = chessEngine.history.remove(chessEngine.history.size() - 1);
-                chessEngine.board[lastMove1[1]][lastMove1[2]] = lastMove1[0];
-                chessEngine.board[lastMove1[3]][lastMove1[4]] = lastMove1[5];
-
-                if (currentSelection[0] != -1 && currentSelection[1] != -1) {
-                    chessEngine.removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
-                }
-
-                updateCell(lastMove1[1], lastMove1[2]);
-                updateCell(lastMove1[3], lastMove1[4]);
-            }
-        }
-
-        if (lastMove[0] == 8) {
-            chessEngine.whiteKing[0] = lastMove[1];
-            chessEngine.whiteKing[1] = lastMove[2];
-        } else if (lastMove[0] == -8) {
-            chessEngine.blackKing[0] = lastMove[1];
-            chessEngine.blackKing[1] = lastMove[2];
-        }
-
-        updateCell(lastMove[1], lastMove[2]);
-        updateCell(lastMove[3], lastMove[4]);
-
-        chessEngine.isWhiteMove = !chessEngine.isWhiteMove;
-        toggleButtons();
-
-        infoTop.setText(chessEngine.isWhiteMove ? "White Move" : "Black Move");
-        infoBottom.setText(chessEngine.isWhiteMove ? "White Move" : "Black Move");
-
-        updateCell(chessEngine.whiteKing[0], chessEngine.whiteKing[1], -2, Color.RED);
-        updateCell(chessEngine.blackKing[0], chessEngine.blackKing[1], -2, Color.RED);
-
-        isGameFinished = false;
-        chessEngine.drawOrMateCheck();
     }
 
     @Override

@@ -42,6 +42,7 @@ public class ChessEngine {
     List<byte[]> history = new ArrayList<>();
     byte[] lastMove = new byte[6];
     boolean isWhiteMove = true;
+    boolean isGameFinished = false;
 
     byte[] whiteKing = {7,4}; // Y; X
     byte[] blackKing = {0,4}; // Y; X;
@@ -127,6 +128,57 @@ public class ChessEngine {
             drawOrMateCheck();
             onSuccess.call();
         }
+    }
+
+    public void cancelMove(byte[] currentSelection) {
+        if (history.isEmpty()) {
+            return;
+        }
+
+        byte[] lastMove = history.remove(history.size() - 1);
+        board[lastMove[1]][lastMove[2]] = lastMove[0];
+        board[lastMove[3]][lastMove[4]] = lastMove[5];
+
+        if (currentSelection[0] != -1 && currentSelection[1] != -1) {
+            removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
+        }
+
+        if (Math.abs(lastMove[0]) == 8) {
+            if (Math.abs(lastMove[2]-lastMove[4]) == 2) {
+                byte[] lastMove1 = history.remove(history.size() - 1);
+                board[lastMove1[1]][lastMove1[2]] = lastMove1[0];
+                board[lastMove1[3]][lastMove1[4]] = lastMove1[5];
+
+                if (currentSelection[0] != -1 && currentSelection[1] != -1) {
+                    removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
+                }
+
+                callback.updateCell(lastMove1[1], lastMove1[2]);
+                callback.updateCell(lastMove1[3], lastMove1[4]);
+            }
+        }
+
+        if (lastMove[0] == 8) {
+            whiteKing[0] = lastMove[1];
+            whiteKing[1] = lastMove[2];
+        } else if (lastMove[0] == -8) {
+            blackKing[0] = lastMove[1];
+            blackKing[1] = lastMove[2];
+        }
+
+        callback.updateCell(lastMove[1], lastMove[2]);
+        callback.updateCell(lastMove[3], lastMove[4]);
+
+        isWhiteMove = !isWhiteMove;
+        callback.toggleButtons();
+
+        callback.setTexts(isWhiteMove);
+
+        callback.updateCell(whiteKing[0], whiteKing[1], -2, Color.RED);
+        callback.updateCell(blackKing[0], blackKing[1], -2, Color.RED);
+
+        isGameFinished = false;
+        drawOrMateCheck();
     }
 
     public void drawOrMateCheck() {
