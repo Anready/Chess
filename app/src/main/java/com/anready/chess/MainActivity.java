@@ -18,16 +18,15 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements ChessEngine.ChessEngineCallback {
     private ChessEngine chessEngine;
 
     private TextView infoTop;
     private TextView infoBottom;
+    private Button whiteButton, blackButton;
 
     boolean isGameFinished = false;
     private byte[] currentSelection = {-1, -1};
@@ -55,8 +54,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-
-        chessEngine = new ChessEngine();
         
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -67,13 +64,15 @@ public class MainActivity extends AppCompatActivity {
         infoTop = findViewById(R.id.textView);
         infoBottom = findViewById(R.id.textView2);
 
-        Button whiteButton = findViewById(R.id.button);
-        Button blackButton = findViewById(R.id.button2);
+        whiteButton = findViewById(R.id.button);
+        blackButton = findViewById(R.id.button2);
 
-        whiteButton.setOnClickListener(v -> cancelMove(whiteButton, blackButton));
-        blackButton.setOnClickListener(v -> cancelMove(whiteButton, blackButton));
+        whiteButton.setOnClickListener(v -> cancelMove());
+        blackButton.setOnClickListener(v -> cancelMove());
 
-        toggleButtons(whiteButton, blackButton);
+        chessEngine = new ChessEngine(this);
+
+        toggleButtons();
 
         infoTop.setText(chessEngine.isWhiteMove ? "White Move" : "Black Move");
         infoBottom.setText(chessEngine.isWhiteMove ? "White Move" : "Black Move");
@@ -120,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
 
                     if (((chessEngine.isWhiteMove && chessEngine.board[clickedY][clickedX] > 0) || (!chessEngine.isWhiteMove && chessEngine.board[clickedY][clickedX] < 0))) {
                         if (currentSelection[0] != -1 && currentSelection[1] != -1) {
-                            removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
+                            chessEngine.removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
                         }
 
                         if (clickedY == currentSelection[0] && clickedX == currentSelection[1]) {
@@ -129,81 +128,9 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         currentSelection = pos;
-                        setDotForAllPossibleMoves(clickedY, clickedX);
+                        chessEngine.setDotForAllPossibleMoves(clickedY, clickedX);
                     } else if (currentSelection[0] != -1 && currentSelection[1] != -1) {
-                        if (chessEngine.isAllowedToMove(currentSelection[0], currentSelection[1], clickedY, clickedX)) {
-                            updateCell(chessEngine.whiteKing[0], chessEngine.whiteKing[1], -2, Color.RED);
-                            updateCell(chessEngine.blackKing[0], chessEngine.blackKing[1], -2, Color.RED);
-
-                            removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
-
-                            if (Math.abs(chessEngine.board[currentSelection[0]][currentSelection[1]]) == 8 && Math.abs(clickedX - currentSelection[1]) == 2) {
-                                if (clickedX == 2) {
-                                    chessEngine.board[clickedY][0] = 0;
-                                    chessEngine.board[clickedY][3] = (byte)(5 * chessEngine.isNeg(chessEngine.board[currentSelection[0]][currentSelection[1]]));
-
-                                    updateCell(clickedY, (byte) 0);
-                                    updateCell(clickedY, (byte) 3);
-
-                                    addMoveToHistory(chessEngine.board[clickedY][3], clickedY, (byte) 0, clickedY, (byte) 3, (byte) 0);
-                                } else if (clickedX == 6) {
-                                    chessEngine.board[clickedY][7] = 0;
-                                    chessEngine.board[clickedY][5] = (byte)(5 * chessEngine.isNeg(chessEngine.board[currentSelection[0]][currentSelection[1]]));
-
-                                    updateCell(clickedY, (byte) 7);
-                                    updateCell(clickedY, (byte) 5);
-
-                                    addMoveToHistory(chessEngine.board[clickedY][5], clickedY, (byte) 7, clickedY, (byte) 5, (byte) 0);
-                                }
-                            }
-
-                            addMoveToHistory(chessEngine.board[currentSelection[0]][currentSelection[1]],
-                                    currentSelection[0], currentSelection[1], clickedY, clickedX,
-                                    chessEngine.board[clickedY][clickedX]);
-
-                            if (Math.abs(chessEngine.board[currentSelection[0]][currentSelection[1]]) == 1 && Math.abs(currentSelection[1] - clickedX) == 1) {
-                                if (chessEngine.board[clickedY][clickedX] == 0) {
-                                    byte tempY = (byte) (clickedY + chessEngine.isNeg(chessEngine.board[currentSelection[0]][currentSelection[1]]));
-                                    chessEngine.board[tempY][clickedX] = 0;
-                                    updateCell(tempY, clickedX);
-                                }
-                            }
-
-                            chessEngine.board[clickedY][clickedX] = chessEngine.board[currentSelection[0]][currentSelection[1]];
-                            chessEngine.board[currentSelection[0]][currentSelection[1]] = 0;
-
-                            updateCell(currentSelection[0], currentSelection[1]);
-                            updateCell(clickedY, clickedX);
-
-                            if (Math.abs(chessEngine.board[clickedY][clickedX]) == 8) {
-                                if (chessEngine.isWhiteMove) {
-                                    chessEngine.whiteKing[0] = clickedY;
-                                    chessEngine.whiteKing[1] = clickedX;
-                                } else {
-                                    chessEngine.blackKing[0] = clickedY;
-                                    chessEngine.blackKing[1] = clickedX;
-                                }
-                            }
-
-                            if (chessEngine.board[clickedY][clickedX] == 1 && clickedY == 0) {
-                                callChooseDialog(clickedY, clickedX);
-                            } else if (chessEngine.board[clickedY][clickedX] == -1 && clickedY == 7) {
-                                callChooseDialog(clickedY, clickedX);
-                            }
-
-                            chessEngine.isWhiteMove = !chessEngine.isWhiteMove;
-                            toggleButtons(whiteButton, blackButton);
-
-                            infoTop.setText(chessEngine.isWhiteMove ? "White Move" : "Black Move");
-                            infoBottom.setText(chessEngine.isWhiteMove ? "White Move" : "Black Move");
-
-                            if (checkForFigures()) {
-                                endGame("Draw");
-                            }
-
-                            drawOrMateCheck();
-                            currentSelection = new byte[]{-1, -1};
-                        }
+                        chessEngine.makeMove(clickedY, clickedX, currentSelection, () -> currentSelection = new byte[]{-1, -1});
                     }
                 });
 
@@ -212,19 +139,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void addMoveToHistory(byte figureForMove, byte y1, byte x1, byte y2, byte x2, byte figureReplaced) {
-        byte[] historyRecord = new byte[6];
-        historyRecord[0] = figureForMove;
-        historyRecord[1] = y1;
-        historyRecord[2] = x1;
-        historyRecord[3] = y2;
-        historyRecord[4] = x2;
-        historyRecord[5] = figureReplaced;
-        chessEngine.history.add(historyRecord);
-        chessEngine.lastMove = historyRecord;
-    }
-
-    private void cancelMove(Button whiteButton, Button blackButton) {
+    private void cancelMove() {
         if (chessEngine.history.isEmpty()) {
             return;
         }
@@ -234,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
         chessEngine.board[lastMove[3]][lastMove[4]] = lastMove[5];
 
         if (currentSelection[0] != -1 && currentSelection[1] != -1) {
-            removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
+            chessEngine.removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
         }
 
         if (Math.abs(lastMove[0]) == 8) {
@@ -244,7 +159,7 @@ public class MainActivity extends AppCompatActivity {
                 chessEngine.board[lastMove1[3]][lastMove1[4]] = lastMove1[5];
 
                 if (currentSelection[0] != -1 && currentSelection[1] != -1) {
-                    removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
+                    chessEngine.removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
                 }
 
                 updateCell(lastMove1[1], lastMove1[2]);
@@ -264,7 +179,7 @@ public class MainActivity extends AppCompatActivity {
         updateCell(lastMove[3], lastMove[4]);
 
         chessEngine.isWhiteMove = !chessEngine.isWhiteMove;
-        toggleButtons(whiteButton, blackButton);
+        toggleButtons();
 
         infoTop.setText(chessEngine.isWhiteMove ? "White Move" : "Black Move");
         infoBottom.setText(chessEngine.isWhiteMove ? "White Move" : "Black Move");
@@ -273,10 +188,11 @@ public class MainActivity extends AppCompatActivity {
         updateCell(chessEngine.blackKing[0], chessEngine.blackKing[1], -2, Color.RED);
 
         isGameFinished = false;
-        drawOrMateCheck();
+        chessEngine.drawOrMateCheck();
     }
 
-    private void toggleButtons(Button whiteButton, Button blackButton) {
+    @Override
+    public void toggleButtons() {
         if (chessEngine.history.isEmpty()) {
             whiteButton.setVisibility(View.INVISIBLE);
             blackButton.setVisibility(View.INVISIBLE);
@@ -292,7 +208,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void callChooseDialog(byte y1, byte x1) {
+    @Override
+    public void callChooseDialog(byte y1, byte x1) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
         LinearLayout layout = new LinearLayout(this);
@@ -317,7 +234,7 @@ public class MainActivity extends AppCompatActivity {
             btn.setOnClickListener(v -> {
                 chessEngine.board[y1][x1] = (byte) (multiplier * chessEngine.isNeg(chessEngine.board[y1][x1]));
                 updateCell(y1, x1);
-                drawOrMateCheck();
+                chessEngine.drawOrMateCheck();
                 ((AlertDialog) v.getTag()).dismiss();
             });
 
@@ -329,78 +246,21 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void drawOrMateCheck() {
-        byte kingY = chessEngine.isWhiteMove ? chessEngine.whiteKing[0] : chessEngine.blackKing[0];
-        byte kingX = chessEngine.isWhiteMove ? chessEngine.whiteKing[1] : chessEngine.blackKing[1];
-
-        String figure = chessEngine.isWhiteMove ? "White" : "Black";
-        String oppositeFigure = !chessEngine.isWhiteMove ? "White" : "Black";
-
-        if (chessEngine.isCheck(kingY, kingX)) {
-            if (chessEngine.isMate()) {
-                endGame(oppositeFigure + " won");
-            } else {
-                updateCell(kingY, kingX, -1, Color.RED);
-                Toast.makeText(this, "Check for " + figure + "!", Toast.LENGTH_SHORT).show();
-            }
-        } else {
-            if (chessEngine.isMate()) {
-                endGame("Draw");
-            }
-        }
-
-        chessEngine.allMoves = chessEngine.getAllPossibleMoves();
-    }
-
-    private void endGame(String text) {
+    @Override
+    public void endGame(String text) {
         isGameFinished = true;
         infoTop.setText(text);
         infoBottom.setText(text);
         Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
     }
 
-    private void setDotForAllPossibleMoves(byte clickedY, byte clickedX) {
-        handleDotForAllPossibleMoves(clickedY, clickedX, true);
-    }
-
-    private void removeDotForAllPossibleMoves(byte clickedY, byte clickedX) {
-        handleDotForAllPossibleMoves(clickedY, clickedX, false);
-    }
-
-    private void handleDotForAllPossibleMoves(byte clickedY, byte clickedX, boolean isSet) {
-        for (Map.Entry<byte[], List<byte[]>> entry : chessEngine.allMoves.entrySet()) {
-            if (entry.getKey()[0] == clickedY && entry.getKey()[1] == clickedX) {
-                for (byte[] value : entry.getValue()) {
-                    if (isSet) {
-                        updateCell(value[0], value[1], -1, Color.GREEN);
-                    } else {
-                        updateCell(value[0], value[1], -2, Color.GREEN);
-                    }
-                }
-            }
-        }
-
-        if (isSet) {
-            updateCell(clickedY, clickedX, -1, Color.YELLOW);
-        } else {
-            updateCell(clickedY, clickedX, -2, Color.YELLOW);
-        }
-    }
-
-    /// To debug board
-    private void updateCell() {
-        for (byte y = 0; y < 8; y++) {
-            for (byte x = 0; x < 8; x++) {
-                updateCell(y, x);
-            }
-        }
-    }
-
-    private void updateCell(byte y, byte x) {
+    @Override
+    public void updateCell(byte y, byte x) {
         updateCell(y, x, 0, Color.GREEN);
     }
 
-    private void updateCell(int y, int x, int img, int color) {
+    @Override
+    public void updateCell(int y, int x, int img, int color) {
         byte piece = chessEngine.board[y][x];
         ImageView square = squares[y][x];
 
@@ -443,28 +303,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private boolean checkForFigures() {
-        List<Byte> figures = new ArrayList<>();
-        for (byte y = 0; y < 8; y++) {
-            for (byte x = 0; x < 8; x++) {
-                if (chessEngine.board[y][x] != 0) {
-                    figures.add(chessEngine.board[y][x]);
-                }
-            }
-        }
-
-        if (figures.size() == 2) {
-            return true;
-        }
-
-        if (figures.size() == 3 ) {
-            if (figures.contains((byte) 8) && figures.contains((byte) -8) && figures.contains((byte) 2)) {
-                return true;
-            }
-
-            return figures.contains((byte) 8) && figures.contains((byte) -8) && figures.contains((byte) 3);
-        }
-
-        return false;
+    @Override
+    public void setTexts(boolean isWhiteMove) {
+        infoTop.setText(isWhiteMove ? "White Move" : "Black Move");
+        infoBottom.setText(isWhiteMove ? "White Move" : "Black Move");
     }
 }

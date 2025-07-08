@@ -1,5 +1,9 @@
 package com.anready.chess;
 
+import android.app.Activity;
+import android.graphics.Color;
+import android.widget.Toast;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -7,6 +11,22 @@ import java.util.List;
 import java.util.Map;
 
 public class ChessEngine {
+    public interface ChessEngineCallback {
+        void updateCell(byte y, byte x);
+        void updateCell(int y, int x, int figure, int color);
+        void callChooseDialog(byte y1, byte x1);
+        void endGame(String text);
+        void toggleButtons();
+        void setTexts(boolean isWhiteMove);
+    }
+
+    public interface Callback {
+        void call();
+    }
+
+    private final ChessEngineCallback callback;
+    private final Activity activity;
+
     public byte[][] board = {
             /*0*/{-5, -2, -3, -9, -8, -3, -2, -5},
             /*1*/{-1, -1, -1, -1, -1, -1, -1, -1},
@@ -19,18 +39,6 @@ public class ChessEngine {
             //_____0___1___2___3___4___5___6___7__\\
     };
 
-//    public byte[][] board = {
-//            /*0*/{-5, +0, +0, -8, +0, -3, -2, -5},
-//            /*1*/{-1, +5, -1, -2, -1, -9, -1, -1},
-//            /*2*/{+0, +0, +0, +0, +0, +0, +0, +0},
-//            /*3*/{+0, +0, +0, +0, +0, +0, +3, +0},
-//            /*4*/{+0, +0, +0, +1, +0, +0, +0, +0},
-//            /*5*/{+0, +0, +0, +0, +1, +0, +1, +3},
-//            /*6*/{+1, +0, +0, +0, +8, +1, +0, +1},
-//            /*7*/{+0, +0, +0, +0, +0, +0, +0, +0}
-//            //_____0___1___2___3___4___5___6___7__\\
-//    };
-
     List<byte[]> history = new ArrayList<>();
     byte[] lastMove = new byte[6];
     boolean isWhiteMove = true;
@@ -40,20 +48,175 @@ public class ChessEngine {
 
     public Map<byte[], List<byte[]>> allMoves;
 
-    public ChessEngine() {
+    public ChessEngine(Activity activity) {
+        allMoves = getAllPossibleMoves();
+        this.activity = activity;
+        this.callback = (ChessEngineCallback) activity;
+    }
+
+    public void makeMove(byte clickedY, byte clickedX, byte[] currentSelection, Callback onSuccess) {
+        if (isAllowedToMove(currentSelection[0], currentSelection[1], clickedY, clickedX)) {
+            callback.updateCell(whiteKing[0], whiteKing[1], -2, Color.RED);
+            callback.updateCell(blackKing[0], blackKing[1], -2, Color.RED);
+
+            removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
+
+            if (Math.abs(board[currentSelection[0]][currentSelection[1]]) == 8 && Math.abs(clickedX - currentSelection[1]) == 2) {
+                if (clickedX == 2) {
+                    board[clickedY][0] = 0;
+                    board[clickedY][3] = (byte)(5 * isNeg(board[currentSelection[0]][currentSelection[1]]));
+
+                    callback.updateCell(clickedY, (byte) 0);
+                    callback.updateCell(clickedY, (byte) 3);
+
+                    addMoveToHistory(board[clickedY][3], clickedY, (byte) 0, clickedY, (byte) 3, (byte) 0);
+                } else if (clickedX == 6) {
+                    board[clickedY][7] = 0;
+                    board[clickedY][5] = (byte)(5 * isNeg(board[currentSelection[0]][currentSelection[1]]));
+
+                    callback.updateCell(clickedY, (byte) 7);
+                    callback.updateCell(clickedY, (byte) 5);
+
+                    addMoveToHistory(board[clickedY][5], clickedY, (byte) 7, clickedY, (byte) 5, (byte) 0);
+                }
+            }
+
+            addMoveToHistory(board[currentSelection[0]][currentSelection[1]],
+                    currentSelection[0], currentSelection[1], clickedY, clickedX,
+                    board[clickedY][clickedX]);
+
+            if (Math.abs(board[currentSelection[0]][currentSelection[1]]) == 1 && Math.abs(currentSelection[1] - clickedX) == 1) {
+                if (board[clickedY][clickedX] == 0) {
+                    byte tempY = (byte) (clickedY + isNeg(board[currentSelection[0]][currentSelection[1]]));
+                    board[tempY][clickedX] = 0;
+                    callback.updateCell(tempY, clickedX);
+                }
+            }
+
+            board[clickedY][clickedX] = board[currentSelection[0]][currentSelection[1]];
+            board[currentSelection[0]][currentSelection[1]] = 0;
+
+            callback.updateCell(currentSelection[0], currentSelection[1]);
+            callback.updateCell(clickedY, clickedX);
+
+            if (Math.abs(board[clickedY][clickedX]) == 8) {
+                if (isWhiteMove) {
+                    whiteKing[0] = clickedY;
+                    whiteKing[1] = clickedX;
+                } else {
+                    blackKing[0] = clickedY;
+                    blackKing[1] = clickedX;
+                }
+            }
+
+            if (board[clickedY][clickedX] == 1 && clickedY == 0) {
+                callback.callChooseDialog(clickedY, clickedX);
+            } else if (board[clickedY][clickedX] == -1 && clickedY == 7) {
+                callback.callChooseDialog(clickedY, clickedX);
+            }
+
+            isWhiteMove = !isWhiteMove;
+            callback.toggleButtons();
+
+            callback.setTexts(isWhiteMove);
+
+            if (checkForFigures()) {
+                callback.endGame("Draw");
+            }
+
+            drawOrMateCheck();
+            onSuccess.call();
+        }
+    }
+
+    public void drawOrMateCheck() {
+        byte kingY = isWhiteMove ? whiteKing[0] : blackKing[0];
+        byte kingX = isWhiteMove ? whiteKing[1] : blackKing[1];
+
+        String figure = isWhiteMove ? "White" : "Black";
+        String oppositeFigure = !isWhiteMove ? "White" : "Black";
+
+        if (isCheck(kingY, kingX)) {
+            if (isMate()) {
+                callback.endGame(oppositeFigure + " won");
+            } else {
+                callback.updateCell(kingY, kingX, -1, Color.RED);
+                Toast.makeText(activity, "Check for " + figure + "!", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            if (isMate()) {
+                callback.endGame("Draw");
+            }
+        }
+
         allMoves = getAllPossibleMoves();
     }
 
-//    public ChessEngine(byte[][] board, List<byte[]> history, byte[] lastMove,
-//                       boolean isWhiteMove, byte[] whiteKing, byte[] blackKing, Map<byte[], List<byte[]>> allMoves) {
-//        this.board = board;
-//        this.history = history;
-//        this.lastMove = lastMove;
-//        this.isWhiteMove = isWhiteMove;
-//        this.whiteKing = whiteKing;
-//        this.blackKing = blackKing;
-//        this.allMoves = allMoves;
-//    }
+    private void addMoveToHistory(byte figureForMove, byte y1, byte x1, byte y2, byte x2, byte figureReplaced) {
+        byte[] historyRecord = new byte[6];
+        historyRecord[0] = figureForMove;
+        historyRecord[1] = y1;
+        historyRecord[2] = x1;
+        historyRecord[3] = y2;
+        historyRecord[4] = x2;
+        historyRecord[5] = figureReplaced;
+
+        history.add(historyRecord);
+        lastMove = historyRecord;
+    }
+
+    public void setDotForAllPossibleMoves(byte clickedY, byte clickedX) {
+        handleDotForAllPossibleMoves(clickedY, clickedX, true);
+    }
+
+    public void removeDotForAllPossibleMoves(byte clickedY, byte clickedX) {
+        handleDotForAllPossibleMoves(clickedY, clickedX, false);
+    }
+
+    private void handleDotForAllPossibleMoves(byte clickedY, byte clickedX, boolean isSet) {
+        for (Map.Entry<byte[], List<byte[]>> entry : allMoves.entrySet()) {
+            if (entry.getKey()[0] == clickedY && entry.getKey()[1] == clickedX) {
+                for (byte[] value : entry.getValue()) {
+                    if (isSet) {
+                        callback.updateCell(value[0], value[1], -1, Color.GREEN);
+                    } else {
+                        callback.updateCell(value[0], value[1], -2, Color.GREEN);
+                    }
+                }
+            }
+        }
+
+        if (isSet) {
+            callback.updateCell(clickedY, clickedX, -1, Color.YELLOW);
+        } else {
+            callback.updateCell(clickedY, clickedX, -2, Color.YELLOW);
+        }
+    }
+
+    private boolean checkForFigures() {
+        List<Byte> figures = new ArrayList<>();
+        for (byte y = 0; y < 8; y++) {
+            for (byte x = 0; x < 8; x++) {
+                if (board[y][x] != 0) {
+                    figures.add(board[y][x]);
+                }
+            }
+        }
+
+        if (figures.size() == 2) {
+            return true;
+        }
+
+        if (figures.size() == 3 ) {
+            if (figures.contains((byte) 8) && figures.contains((byte) -8) && figures.contains((byte) 2)) {
+                return true;
+            }
+
+            return figures.contains((byte) 8) && figures.contains((byte) -8) && figures.contains((byte) 3);
+        }
+
+        return false;
+    }
 
     public boolean isMate() {
         Map<byte[], List<byte[]>> moves = getAllPossibleMoves();
@@ -234,6 +397,7 @@ public class ChessEngine {
                         }
                     }
                 }
+
                 if (!isCheck(kingY, kingX)) {
                     board[value.getKey()[0]][value.getKey()[1]] = value.getValue();
                     board[y][x] = rawPiece;

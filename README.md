@@ -61,7 +61,7 @@ A fully functional chess game with classic rules, including all essential chess 
 
 - Android 6.0 (API level 23) and above
 - Touch screen support
-- Minimum 5 MB free space
+- Minimum 6 MB free space
 
 ## Installation
 
@@ -77,6 +77,21 @@ The project is written in Java using Android SDK. Main components:
 - `ChessEngine.java` - game logic
 - `MainActivity.java` - user interface
 - Resources with chess piece images
+
+### Debug
+
+To debug board (full synchronizing with real matrix) replace all updateCell(byte, byte) (in ChessEngine) with updateCell() and add this code to ChessEngine:
+
+```java
+    /// To debug board
+    private void updateCell() {
+        for (byte y = 0; y < 8; y++) {
+            for (byte x = 0; x < 8; x++) {
+                callback.updateCell(y, x);
+            }
+        }
+    }
+```
 
 ## License
 
