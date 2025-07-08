@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+
+    <!-- Шахматные цвета -->
+    <color name="chess_dark_bg">#1a1a1a</color>
+    <color name="chess_gold">#FFD700</color>
+    <color name="chess_bronze">#CD7F32</color>
+    <color name="chess_silver">#C0C0C0</color>
+
+    <!-- Цвета для кнопок -->
+    <color name="button_primary">#8B4513</color>
+    <color name="button_primary_pressed">#A0522D</color>
+    <color name="button_secondary">#2F2F2F</color>
+    <color name="button_secondary_pressed">#404040</color>
 </resources>

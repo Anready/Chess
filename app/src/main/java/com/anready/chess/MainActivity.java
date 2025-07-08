@@ -1,259 +1,153 @@
 package com.anready.chess;
 
-import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
+import android.app.AlertDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.GridLayout;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.TextView;
+import android.widget.Spinner;
 import android.widget.Toast;
-
 import androidx.activity.EdgeToEdge;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import java.util.HashMap;
-import java.util.Map;
-
-public class MainActivity extends AppCompatActivity implements ChessEngine.ChessEngineCallback {
-    private ChessEngine chessEngine;
-
-    private TextView infoTop;
-    private TextView infoBottom;
-    private Button whiteButton, blackButton;
-
-    boolean isGameFinished = false;
-    private byte[] currentSelection = {-1, -1};
-
-    ImageView[][] squares = new ImageView[8][8];
-
-    private final Map<Byte, Integer> pieceMap = new HashMap<>() {{
-        put((byte) 1, R.drawable.white_pawn);
-        put((byte) 2, R.drawable.white_knight);
-        put((byte) 3, R.drawable.white_bishop);
-        put((byte) 5, R.drawable.white_rook);
-        put((byte) 8, R.drawable.white_king);
-        put((byte) 9, R.drawable.white_queen);
-
-        put((byte) -1, R.drawable.black_pawn);
-        put((byte) -2, R.drawable.black_knight);
-        put((byte) -3, R.drawable.black_bishop);
-        put((byte) -5, R.drawable.black_rook);
-        put((byte) -8, R.drawable.black_king);
-        put((byte) -9, R.drawable.black_queen);
-    }};
-
+public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-        
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-
-        infoTop = findViewById(R.id.textView);
-        infoBottom = findViewById(R.id.textView2);
-
-        whiteButton = findViewById(R.id.button);
-        blackButton = findViewById(R.id.button2);
-
-        whiteButton.setOnClickListener(v -> chessEngine.cancelMove(currentSelection));
-        blackButton.setOnClickListener(v -> chessEngine.cancelMove(currentSelection));
-
-        chessEngine = new ChessEngine(this);
-
-        toggleButtons();
-
-        infoTop.setText(chessEngine.isWhiteMove ? "White Move" : "Black Move");
-        infoBottom.setText(chessEngine.isWhiteMove ? "White Move" : "Black Move");
-
-        GridLayout boardGrid = findViewById(R.id.boardGrid);
-        int cellSize = getResources().getDisplayMetrics().widthPixels / 8;
-        for (byte y = 0; y < 8; y++) {
-            for (byte x = 0; x < 8; x++) {
-                ImageView square = new ImageView(this);
-                GridLayout.LayoutParams params = new GridLayout.LayoutParams();
-                params.width = cellSize;
-                params.height = cellSize;
-                params.rowSpec = GridLayout.spec(y);
-                params.columnSpec = GridLayout.spec(x);
-                square.setLayoutParams(params);
-
-                if ((x + y) % 2 == 0) {
-                    square.setBackgroundColor(Color.rgb(240, 217, 181));
-                } else {
-                    square.setBackgroundColor(Color.rgb(181, 136, 99));
-                }
-
-                squares[y][x] = square;
-
-                byte piece = chessEngine.board[y][x];
-                if (piece != 0) {
-                    Integer name = pieceMap.get(piece);
-                    if (name != null) {
-                        square.setImageResource(name);
-                        square.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-                    }
-                }
-
-                square.setTag(new byte[]{y, x});
-
-                square.setOnClickListener(v -> {
-                    byte[] pos = (byte[]) v.getTag();
-                    byte clickedY = pos[0];
-                    byte clickedX = pos[1];
-
-                    if (chessEngine.isGameFinished) {
-                        return;
-                    }
-
-                    if (((chessEngine.isWhiteMove && chessEngine.board[clickedY][clickedX] > 0) || (!chessEngine.isWhiteMove && chessEngine.board[clickedY][clickedX] < 0))) {
-                        if (currentSelection[0] != -1 && currentSelection[1] != -1) {
-                            chessEngine.removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
-                        }
-
-                        if (clickedY == currentSelection[0] && clickedX == currentSelection[1]) {
-                            currentSelection = new byte[]{-1, -1};
-                            return;
-                        }
-
-                        currentSelection = pos;
-                        chessEngine.setDotForAllPossibleMoves(clickedY, clickedX);
-                    } else if (currentSelection[0] != -1 && currentSelection[1] != -1) {
-                        chessEngine.makeMove(clickedY, clickedX, currentSelection, () -> currentSelection = new byte[]{-1, -1});
-                    }
-                });
-
-                boardGrid.addView(square);
-            }
-        }
+        setupUI();
     }
 
-    @Override
-    public void toggleButtons() {
-        if (chessEngine.history.isEmpty()) {
-            whiteButton.setVisibility(View.INVISIBLE);
-            blackButton.setVisibility(View.INVISIBLE);
-            return;
-        }
-
-        if (chessEngine.isWhiteMove) {
-            whiteButton.setVisibility(View.VISIBLE);
-            blackButton.setVisibility(View.INVISIBLE);
-        } else {
-            whiteButton.setVisibility(View.INVISIBLE);
-            blackButton.setVisibility(View.VISIBLE);
-        }
+    private void setupUI() {
+        Button startGameButton = findViewById(R.id.startGameButton);
+        startGameButton.setOnClickListener(v -> showTimeSelectionDialog());
     }
 
-    @Override
-    public void callChooseDialog(byte y1, byte x1) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    private void showTimeSelectionDialog() {
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_time_selection, null);
+        Spinner timeSpinner = dialogView.findViewById(R.id.timeSpinner);
+        Spinner incrementSpinner = dialogView.findViewById(R.id.incrementSpinner);
 
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 50, 50, 50);
+        String[] timeOptions = {"No Time", "30 seconds", "1 minute", "2 minutes", "5 minutes", "10 minutes",
+                "15 minutes", "20 minutes", "25 minutes", "30 minutes", "45 minutes", "60 minutes"};
+        ArrayAdapter<String> timeAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, timeOptions);
+        timeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        timeSpinner.setAdapter(timeAdapter);
 
-        Object[][] options = {
-                {R.string.queen, 9},
-                {R.string.knight, 2},
-                {R.string.bishop, 3},
-                {R.string.rook, 5}
-        };
+        String[] incrementOptions = {"+0", "+1s", "+2s", "+5s",
+                "+10s", "+20s", "+30s", "+60s"};
+        ArrayAdapter<String> incrementAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, incrementOptions);
+        incrementAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        incrementSpinner.setAdapter(incrementAdapter);
 
-        AlertDialog dialog = builder.setTitle("Choose figure:").create();
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Choose playing time")
+                .setView(dialogView)
+                .setPositiveButton("Start game", (dialogInterface, i) -> {
+                    String selectedTime = timeSpinner.getSelectedItem().toString();
+                    String selectedIncrement = incrementSpinner.getSelectedItem().toString();
 
-        for (Object[] opt : options) {
-            Button btn = new Button(this);
-            btn.setText(getResources().getText((int) opt[0]));
-            btn.setTag(dialog);
-            int multiplier = (int) opt[1];
+                    long timeInMs = convertTimeToMilliseconds(selectedTime);
+                    long incrementInMs = convertIncrementToMilliseconds(selectedIncrement);
 
-            btn.setOnClickListener(v -> {
-                chessEngine.board[y1][x1] = (byte) (multiplier * chessEngine.isNeg(chessEngine.board[y1][x1]));
-                updateCell(y1, x1);
-                chessEngine.drawOrMateCheck();
-                ((AlertDialog) v.getTag()).dismiss();
-            });
-
-            layout.addView(btn);
-        }
-
-        builder.setView(layout);
-        dialog.setView(layout);
+                    startGame(timeInMs, incrementInMs);
+                })
+                .setNegativeButton("Cancel", null)
+                .create();
         dialog.show();
     }
 
-    @Override
-    public void endGame(String text) {
-        isGameFinished = true;
-        infoTop.setText(text);
-        infoBottom.setText(text);
-        Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void updateCell(byte y, byte x) {
-        updateCell(y, x, 0, Color.GREEN);
-    }
-
-    @Override
-    public void updateCell(int y, int x, int img, int color) {
-        byte piece = chessEngine.board[y][x];
-        ImageView square = squares[y][x];
-
-        if (piece == 0 && img == 0) {
-            square.setImageDrawable(null);
-            return;
-        }
-
-        Integer resId = pieceMap.get(piece);
-        if (img == -1) {
-            if (resId != null) {
-                square.setImageResource(resId);
-                square.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-
-                GradientDrawable border = new GradientDrawable();
-                border.setColor(Color.TRANSPARENT);
-                border.setStroke(5, color);
-                square.setForeground(border);
-                return;
-            }
-
-            resId = R.drawable.dote;
-        } else if (img == -2) {
-            square.setForeground(null);
-
-            if (resId == null) {
-                square.setImageDrawable(null);
-                return;
-            }
-
-            square.setImageResource(resId);
-            square.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-            return;
-        }
-
-        if (resId != null) {
-            square.setImageResource(resId);
-            square.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-            square.setForeground(null);
+    private long convertTimeToMilliseconds(String timeString) {
+        switch (timeString) {
+            case "No Time":
+                return 0;
+            case "30 seconds":
+                return 30 * 1000L;
+            case "1 minute":
+                return 60 * 1000L;
+            case "2 minutes":
+                return 2 * 60 * 1000L;
+            case "5 minutes":
+                return 5 * 60 * 1000L;
+            case "15 minutes":
+                return 15 * 60 * 1000L;
+            case "20 minutes":
+                return 20 * 60 * 1000L;
+            case "25 minutes":
+                return 25 * 60 * 1000L;
+            case "30 minutes":
+                return 30 * 60 * 1000L;
+            case "45 minutes":
+                return 45 * 60 * 1000L;
+            case "60 minutes":
+                return 60 * 60 * 1000L;
+            default:
+                return 10 * 60 * 1000L;
         }
     }
 
-    @Override
-    public void setTexts(boolean isWhiteMove) {
-        infoTop.setText(isWhiteMove ? "White Move" : "Black Move");
-        infoBottom.setText(isWhiteMove ? "White Move" : "Black Move");
+    private long convertIncrementToMilliseconds(String incrementString) {
+        switch (incrementString) {
+            case "+1s":
+                return 1000L;
+            case "+2s":
+                return 2 * 1000L;
+            case "+5s":
+                return 5 * 1000L;
+            case "+10s":
+                return 10 * 1000L;
+            case "+20s":
+                return 20 * 1000L;
+            case "+30s":
+                return 30 * 1000L;
+            case "+60s":
+                return 60 * 1000L;
+            default:
+                return 0;
+        }
+    }
+
+    private void startGame(long timeInMs, long incrementInMs) {
+        String timeDisplay = formatTime(timeInMs);
+        String incrementDisplay = formatIncrement(incrementInMs);
+
+        String message = "Game starting!\nTime: " + timeDisplay + "\nIncrement: " + incrementDisplay;
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+
+        Intent intent = new Intent(this, ChessBoard.class);
+        intent.putExtra("time", timeInMs);
+        intent.putExtra("increment", incrementInMs);
+        startActivity(intent);
+    }
+
+    private String formatTime(long timeInMs) {
+        long seconds = timeInMs / 1000;
+        if (seconds < 60) {
+            return seconds + " seconds";
+        } else {
+            long minutes = seconds / 60;
+            return minutes + " minute" + (minutes == 1 ? "" : "s");
+        }
+    }
+
+    private String formatIncrement(long incrementInMs) {
+        if (incrementInMs == 0) {
+            return "+0";
+        } else {
+            long seconds = incrementInMs / 1000;
+            return "+" + seconds + "s";
+        }
     }
 }

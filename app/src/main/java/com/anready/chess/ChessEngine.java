@@ -9,6 +9,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class ChessEngine {
     public interface ChessEngineCallback {
@@ -18,6 +22,7 @@ public class ChessEngine {
         void endGame(String text);
         void toggleButtons();
         void setTexts(boolean isWhiteMove);
+        void updateTimer(long whiteTimer, long blackTimer);
     }
 
     public interface Callback {
@@ -43,16 +48,28 @@ public class ChessEngine {
     byte[] lastMove = new byte[6];
     boolean isWhiteMove = true;
     boolean isGameFinished = false;
+    boolean isTimerUsing = false;
+
+    long whiteTimer = 600000; // ms, 10min
+    long blackTimer = 600000;
+    long increment = 0;
 
     byte[] whiteKing = {7,4}; // Y; X
     byte[] blackKing = {0,4}; // Y; X;
 
     public Map<byte[], List<byte[]>> allMoves;
 
-    public ChessEngine(Activity activity) {
+    public ChessEngine(Activity activity, long time, long increment) {
         allMoves = getAllPossibleMoves();
         this.activity = activity;
         this.callback = (ChessEngineCallback) activity;
+        if (time != 0) {
+            whiteTimer = time;
+            blackTimer = time;
+            this.increment = increment;
+
+            isTimerUsing = true;
+        }
     }
 
     public void makeMove(byte clickedY, byte clickedX, byte[] currentSelection, Callback onSuccess) {
@@ -117,6 +134,10 @@ public class ChessEngine {
             }
 
             isWhiteMove = !isWhiteMove;
+            if (history.size() == 1) {
+                startTimer();
+            }
+
             callback.toggleButtons();
 
             callback.setTexts(isWhiteMove);
@@ -126,8 +147,62 @@ public class ChessEngine {
             }
 
             drawOrMateCheck();
+
+            if (!isGameFinished && isTimerUsing) {
+                if (!isWhiteMove) {
+                    whiteTimer += increment;
+                } else {
+                    blackTimer += increment;
+                }
+            }
+
             onSuccess.call();
         }
+    }
+
+    private void startTimer() {
+        if (!isTimerUsing) {
+            return;
+        }
+
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        final ScheduledFuture<?>[] futureHolder = new ScheduledFuture[1];
+
+        Runnable task = new Runnable() {
+            long lastUIUpdate = System.currentTimeMillis();
+
+            @Override
+            public void run() {
+                if (isGameFinished) {
+                    futureHolder[0].cancel(false);
+                    executor.shutdown();
+                    return;
+                }
+
+                if (isWhiteMove) {
+                    whiteTimer = Math.max(0, whiteTimer - 10);
+                } else {
+                    blackTimer = Math.max(0, blackTimer - 10);
+                }
+
+                long now = System.currentTimeMillis();
+                if (now - lastUIUpdate >= 100) {
+                    lastUIUpdate = now;
+
+                    activity.runOnUiThread(() -> callback.updateTimer(whiteTimer, blackTimer));
+                }
+
+                if (whiteTimer == 0) {
+                    activity.runOnUiThread(() -> callback.endGame("Black won"));
+                    activity.runOnUiThread(() -> callback.updateTimer(whiteTimer, blackTimer));
+                } else if (blackTimer == 0) {
+                    activity.runOnUiThread(() -> callback.endGame("White won"));
+                    activity.runOnUiThread(() -> callback.updateTimer(whiteTimer, blackTimer));
+                }
+            }
+        };
+
+        futureHolder[0] = executor.scheduleWithFixedDelay(task, 0, 10, TimeUnit.MILLISECONDS);
     }
 
     public void cancelMove(byte[] currentSelection) {
