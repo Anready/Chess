@@ -233,6 +233,19 @@ public class ChessEngine {
             }
         }
 
+        if (!history.isEmpty()) this.lastMove = history.get(history.size() - 1);
+
+        if (Math.abs(lastMove[0]) == 1){
+            if (Math.abs(lastMove[2]-lastMove[4]) == 1 && lastMove[5] == 0) {
+                board[lastMove[1]][lastMove[4]] = deAbs(lastMove[0]);
+                callback.updateCell(lastMove[1], lastMove[4]);
+
+                this.lastMove = new byte[]{deAbs(lastMove[0]), (byte) (lastMove[1] + (2 * deAbs(lastMove[0]))),
+                        lastMove[4], lastMove[1], lastMove[4], 0
+                };
+            }
+        }
+
         if (lastMove[0] == 8) {
             whiteKing[0] = lastMove[1];
             whiteKing[1] = lastMove[2];
