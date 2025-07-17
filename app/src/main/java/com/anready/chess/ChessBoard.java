@@ -2,8 +2,11 @@ package com.anready.chess;
 
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.widget.Button;
 import android.widget.GridLayout;
 import android.widget.ImageView;
@@ -21,6 +24,7 @@ import androidx.core.view.WindowInsetsCompat;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 public class ChessBoard extends AppCompatActivity implements ChessEngine.ChessEngineCallback {
 
@@ -63,6 +67,8 @@ public class ChessBoard extends AppCompatActivity implements ChessEngine.ChessEn
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        enterFullscreen();
 
         infoTop = findViewById(R.id.textView);
         infoBottom = findViewById(R.id.textView2);
@@ -146,6 +152,26 @@ public class ChessBoard extends AppCompatActivity implements ChessEngine.ChessEn
 
                 boardGrid.addView(square);
             }
+        }
+    }
+
+    private void enterFullscreen() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+            Objects.requireNonNull(getWindow().getInsetsController()).hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+            getWindow().getInsetsController().setSystemBarsBehavior(
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            );
+        } else {
+            View decorView = getWindow().getDecorView();
+            decorView.setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            | View.SYSTEM_UI_FLAG_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            );
         }
     }
 
@@ -269,8 +295,11 @@ public class ChessBoard extends AppCompatActivity implements ChessEngine.ChessEn
 
     @Override
     public void updateTimer(long whiteTimer, long blackTimer) {
-        String whiteTime = String.format(Locale.getDefault(),"%02d:%02d:%02d", whiteTimer / 60000, (whiteTimer % 60000) / 1000, (whiteTimer % 1000) / 10);
-        String blackTime = String.format(Locale.getDefault(),"%02d:%02d:%02d", blackTimer / 60000, (blackTimer % 60000) / 1000, (blackTimer % 1000) / 10);
+        String whiteFormat = whiteTimer > 10000 ? "%02d:%02d" : "%02d:%02d:%d";
+        String blackFormat = blackTimer > 10000 ? "%02d:%02d" : "%02d:%02d:%d";
+
+        String whiteTime = String.format(Locale.getDefault(), whiteFormat, whiteTimer / 60000, (whiteTimer % 60000) / 1000, (whiteTimer % 1000) / 100);
+        String blackTime = String.format(Locale.getDefault(), blackFormat, blackTimer / 60000, (blackTimer % 60000) / 1000, (blackTimer % 1000) / 100);
 
         whiteTimerRight.setText(whiteTime);
         whiteTimerLeft.setText(whiteTime);

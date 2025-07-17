@@ -680,6 +680,10 @@ public class ChessEngine {
     private Map<byte[], Byte> getRMoves(byte rawPiece, byte y, byte x) {
         Map<byte[], Byte> allPossibleMoves = new HashMap<>();
 
+        if (isCheck(y, x)) {
+            return allPossibleMoves;
+        }
+
         if (!isFigureInHistory(rawPiece)) {
             if (!isFigureInHistory((byte) (5 * isNeg(rawPiece)), y, (byte) 0)) {
                 allPossibleMoves.putAll(xLineMoves(y, x, (byte) 2));
