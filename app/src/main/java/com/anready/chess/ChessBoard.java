@@ -5,6 +5,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.widget.Button;
@@ -21,7 +22,10 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.anready.chess.models.Figure;
+
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -295,8 +299,8 @@ public class ChessBoard extends AppCompatActivity implements ChessEngine.ChessEn
 
     @Override
     public void updateTimer(long whiteTimer, long blackTimer) {
-        String whiteFormat = whiteTimer > 10000 ? "%02d:%02d" : "%02d:%02d:%d";
-        String blackFormat = blackTimer > 10000 ? "%02d:%02d" : "%02d:%02d:%d";
+        String whiteFormat = whiteTimer > 10000 || whiteTimer == 0 ? "%02d:%02d" : "%02d:%02d:%d";
+        String blackFormat = blackTimer > 10000 || blackTimer == 0 ? "%02d:%02d" : "%02d:%02d:%d";
 
         String whiteTime = String.format(Locale.getDefault(), whiteFormat, whiteTimer / 60000, (whiteTimer % 60000) / 1000, (whiteTimer % 1000) / 100);
         String blackTime = String.format(Locale.getDefault(), blackFormat, blackTimer / 60000, (blackTimer % 60000) / 1000, (blackTimer % 1000) / 100);
@@ -305,5 +309,53 @@ public class ChessBoard extends AppCompatActivity implements ChessEngine.ChessEn
         whiteTimerLeft.setText(whiteTime);
         blackTimerRight.setText(blackTime);
         blackTimerLeft.setText(blackTime);
+    }
+
+    @Override
+    public void updatePoints(List<Figure> whiteFigures, List<Figure> blackFigures, int whitePoints, int blackPoints) {
+        LinearLayout whiteLayout = findViewById(R.id.whiteFigures);
+        LinearLayout blackLayout = findViewById(R.id.blackFigures);
+
+        whiteLayout.removeAllViews();
+        blackLayout.removeAllViews();
+
+        int cellSize = getResources().getDisplayMetrics().widthPixels / 16;
+
+        for (Figure figure : whiteFigures) {
+            ImageView imageView = new ImageView(this);
+            imageView.setImageResource(figure.getResource());
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(cellSize, cellSize);
+            params.setMarginStart(-cellSize / (whiteFigures.size() < 17 ? 4 : 3));
+
+            imageView.setLayoutParams(params);
+            blackLayout.addView(imageView);
+        }
+
+        for (Figure figure : blackFigures) {
+            ImageView imageView = new ImageView(this);
+            imageView.setImageResource(figure.getResource());
+            imageView.setRotation(180);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(cellSize, cellSize);
+            params.setMarginStart(-cellSize / (blackFigures.size() < 17 ? 4 : 3));
+
+            imageView.setLayoutParams(params);
+            whiteLayout.addView(imageView);
+        }
+
+        int totalPoints = whitePoints + blackPoints;
+
+        TextView pointsView = new TextView(this);
+        pointsView.setTextColor(Color.BLACK);
+        pointsView.setText(String.format(Locale.getDefault(), "+%d", Math.abs(totalPoints)));
+        pointsView.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+
+        if (totalPoints < 0) {
+            whiteLayout.addView(pointsView);
+        } else if (totalPoints > 0) {
+            blackLayout.addView(pointsView);
+        }
     }
 }

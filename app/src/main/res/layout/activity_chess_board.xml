@@ -26,7 +26,7 @@
         android:text="@string/white_move"
         android:rotation="180"
         android:textColor="@color/white"
-        app:layout_constraintBottom_toTopOf="@+id/boardGrid"
+        app:layout_constraintBottom_toTopOf="@+id/blackFigures"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -40,7 +40,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/boardGrid" />
+        app:layout_constraintTop_toBottomOf="@+id/whiteFigures" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/button"
@@ -142,5 +142,32 @@
         app:layout_constraintEnd_toStartOf="@+id/button2"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/boardGrid" />
+
+    <LinearLayout
+        android:id="@+id/whiteFigures"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="24dp"
+        android:padding="5dp"
+        android:background="@drawable/timer_border"
+        android:backgroundTint="#F0D9B5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/whiteTimerLeft"/>
+
+    <LinearLayout
+        android:id="@+id/blackFigures"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:rotation="180"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="24dp"
+        android:padding="5dp"
+        android:background="@drawable/timer_border"
+        android:backgroundTint="#F0D9B5"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/blackTimerRight"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

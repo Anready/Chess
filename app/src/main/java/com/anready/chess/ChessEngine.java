@@ -4,11 +4,14 @@ import android.app.Activity;
 import android.graphics.Color;
 import android.widget.Toast;
 
+import com.anready.chess.models.Figure;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -23,6 +26,7 @@ public class ChessEngine {
         void toggleButtons();
         void setTexts(boolean isWhiteMove);
         void updateTimer(long whiteTimer, long blackTimer);
+        void updatePoints(List<Figure> whiteFigures, List<Figure> blackFigures, int whitePoints, int blackPoints);
     }
 
     public interface Callback {
@@ -43,6 +47,19 @@ public class ChessEngine {
             /*7*/{+5, +2, +3, +9, +8, +3, +2, +5}
             //_____0___1___2___3___4___5___6___7__\\
     };
+
+    private final Map<Byte, Figure> pieceMap = new HashMap<>(){{
+        put((byte) +1, new Figure(1, R.drawable.white_pawn));
+        put((byte) +2, new Figure(3, R.drawable.white_knight));
+        put((byte) +3, new Figure(3, R.drawable.white_bishop));
+        put((byte) +5, new Figure(5, R.drawable.white_rook));
+        put((byte) +9, new Figure(10, R.drawable.white_queen));
+        put((byte) -1, new Figure(-1, R.drawable.black_pawn));
+        put((byte) -2, new Figure(-3, R.drawable.black_knight));
+        put((byte) -3, new Figure(-3, R.drawable.black_bishop));
+        put((byte) -5, new Figure(-5, R.drawable.black_rook));
+        put((byte) -9, new Figure(-10, R.drawable.black_queen));
+    }};
 
     List<byte[]> history = new ArrayList<>();
     byte[] lastMove = new byte[6];
@@ -141,6 +158,7 @@ public class ChessEngine {
             callback.toggleButtons();
 
             callback.setTexts(isWhiteMove);
+            countTotalPoints();
 
             if (checkForFigures()) {
                 callback.endGame("Draw");
@@ -158,6 +176,66 @@ public class ChessEngine {
 
             onSuccess.call();
         }
+    }
+
+    private void countTotalPoints() {
+        Map<Integer, List<Figure>> figures = new HashMap<>();
+        for (byte y = 0; y < 8; y++) {
+            for (byte x = 0; x < 8; x++) {
+                if (board[y][x] != 0) {
+                    int figure = board[y][x];
+
+                    List<Figure> list = new ArrayList<>();
+                    if (figures.containsKey(figure)) {
+                        list = figures.get(figure);
+                    }
+
+                    Objects.requireNonNull(list).add(pieceMap.get(board[y][x]));
+                    figures.put(figure, list);
+                }
+            }
+        }
+
+        int whitePoints = 0;
+        int blackPoints = 0;
+
+        List<Figure> whiteMissing = addMissing(figures, 8, 1);
+        List<Figure> blackMissing = addMissing(figures, 8, -1);
+
+        whiteMissing.addAll(addMissing(figures, 2, 2));
+        blackMissing.addAll(addMissing(figures, 2, -2));
+
+        whiteMissing.addAll(addMissing(figures, 2, 3));
+        blackMissing.addAll(addMissing(figures, 2, -3));
+
+        whiteMissing.addAll(addMissing(figures, 2, 5));
+        blackMissing.addAll(addMissing(figures, 2, -5));
+
+        whiteMissing.addAll(addMissing(figures, 1, 9));
+        blackMissing.addAll(addMissing(figures, 1, -9));
+
+        for (Figure figure : whiteMissing) {
+            whitePoints += figure.getPoints();
+        }
+
+        for (Figure figure : blackMissing) {
+            blackPoints += figure.getPoints();
+        }
+
+        callback.updatePoints(whiteMissing, blackMissing, whitePoints, blackPoints);
+    }
+
+    private List<Figure> addMissing(Map<Integer, List<Figure>> figures, int max, int piece) {
+        List<Figure> list = new ArrayList<>();
+        int times = figures.get(piece) != null ? figures.get(piece).size() : 0;
+        int alternativeTimes = figures.get(-piece) != null ? figures.get(-piece).size() : 0;
+        max = Math.max(max, alternativeTimes);
+
+        for (int i = 0; i < max - times; i++) {
+            list.add(pieceMap.get((byte) piece));
+        }
+
+        return list;
     }
 
     private void startTimer() {
