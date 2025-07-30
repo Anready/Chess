@@ -104,7 +104,7 @@ public class ChessEngine {
                     callback.updateCell(clickedY, (byte) 0);
                     callback.updateCell(clickedY, (byte) 3);
 
-                    addMoveToHistory(board[clickedY][3], clickedY, (byte) 0, clickedY, (byte) 3, (byte) 0);
+                   // addMoveToHistory(board[clickedY][3], clickedY, (byte) 0, clickedY, (byte) 3, (byte) 0);
                 } else if (clickedX == 6) {
                     board[clickedY][7] = 0;
                     board[clickedY][5] = (byte)(5 * isNeg(board[currentSelection[0]][currentSelection[1]]));
@@ -112,7 +112,7 @@ public class ChessEngine {
                     callback.updateCell(clickedY, (byte) 7);
                     callback.updateCell(clickedY, (byte) 5);
 
-                    addMoveToHistory(board[clickedY][5], clickedY, (byte) 7, clickedY, (byte) 5, (byte) 0);
+                   // addMoveToHistory(board[clickedY][5], clickedY, (byte) 7, clickedY, (byte) 5, (byte) 0);
                 }
             }
 
@@ -298,16 +298,26 @@ public class ChessEngine {
 
         if (Math.abs(lastMove[0]) == 8) {
             if (Math.abs(lastMove[2]-lastMove[4]) == 2) {
-                byte[] lastMove1 = history.remove(history.size() - 1);
-                board[lastMove1[1]][lastMove1[2]] = lastMove1[0];
-                board[lastMove1[3]][lastMove1[4]] = lastMove1[5];
+                byte x = 0, x1 = 0;
+                if (lastMove[2] == 4 && lastMove[4] == 6) {
+                    board[lastMove[1]][7] = (byte) (isNeg(lastMove[0]) * 5);
+                    board[lastMove[1]][5] = 0;
+
+                    x = 7;
+                    x1 = 5;
+                } else if (lastMove[2] == 4 && lastMove[4] == 2) {
+                    board[lastMove[1]][0] = (byte) (isNeg(lastMove[0]) * 5);
+                    board[lastMove[1]][3] = 0;
+
+                    x1 = 3;
+                }
 
                 if (currentSelection[0] != -1 && currentSelection[1] != -1) {
                     removeDotForAllPossibleMoves(currentSelection[0], currentSelection[1]);
                 }
 
-                callback.updateCell(lastMove1[1], lastMove1[2]);
-                callback.updateCell(lastMove1[3], lastMove1[4]);
+                callback.updateCell(lastMove[1], x);
+                callback.updateCell(lastMove[1], x1);
             }
         }
 
@@ -370,14 +380,15 @@ public class ChessEngine {
         allMoves = getAllPossibleMoves();
     }
 
-    private void addMoveToHistory(byte figureForMove, byte y1, byte x1, byte y2, byte x2, byte figureReplaced) {
-        byte[] historyRecord = new byte[6];
+    public void addMoveToHistory(byte figureForMove, byte y1, byte x1, byte y2, byte x2, byte figureReplaced) {
+        byte[] historyRecord = new byte[7];
         historyRecord[0] = figureForMove;
         historyRecord[1] = y1;
         historyRecord[2] = x1;
         historyRecord[3] = y2;
         historyRecord[4] = x2;
         historyRecord[5] = figureReplaced;
+        historyRecord[6] = 0; // promoted to
 
         history.add(historyRecord);
         lastMove = historyRecord;

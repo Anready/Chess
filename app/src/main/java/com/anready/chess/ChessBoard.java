@@ -1,5 +1,6 @@
 package com.anready.chess;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
@@ -24,6 +25,8 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.anready.chess.models.Figure;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -96,6 +99,8 @@ public class ChessBoard extends AppCompatActivity implements ChessEngine.ChessEn
 
         infoTop.setText(chessEngine.isWhiteMove ? "White Move" : "Black Move");
         infoBottom.setText(chessEngine.isWhiteMove ? "White Move" : "Black Move");
+
+        findViewById(R.id.button3).setOnClickListener(v -> startAnalyseActivity());
 
         GridLayout boardGrid = findViewById(R.id.boardGrid);
         int cellSize = getResources().getDisplayMetrics().widthPixels / 8;
@@ -179,6 +184,138 @@ public class ChessBoard extends AppCompatActivity implements ChessEngine.ChessEn
         }
     }
 
+    private char getPieceChar(byte pieceCode) {
+        switch (Math.abs(pieceCode)) {
+            case 1: return 'P';
+            case 2: return 'N';
+            case 3: return 'B';
+            case 5: return 'R';
+            case 8: return 'K';
+            case 9: return 'Q';
+            default: return ' ';
+        }
+    }
+
+    private String indexToCoord(int y, int x) {
+        char file = (char) ('a' + x);
+        char rank = (char) ('8' - y);
+        return "" + file + rank;
+    }
+
+    private String convertMoveToSan(byte[] move) {
+        byte figureForMove = move[0];
+        byte y1 = move[1];
+        byte x1 = move[2];
+        byte y2 = move[3];
+        byte x2 = move[4];
+        byte figureReplaced = move[5];
+        byte promotionCode = move.length > 6 ? move[6] : 0;
+
+        String fromCoord = indexToCoord(y1, x1);
+        String toCoord = indexToCoord(y2, x2);
+
+        StringBuilder sanMove = new StringBuilder();
+        char pieceChar = getPieceChar(figureForMove);
+
+        if (Math.abs(figureForMove) != 1) {
+            sanMove.append(pieceChar);
+        }
+
+        if (figureReplaced != 0 || (Math.abs(figureForMove) == 1 && Math.abs(x1 - x2) == 1)) {
+            if (Math.abs(figureForMove) == 1) {
+                sanMove.append((char) ('a' + x1));
+            }
+            sanMove.append("x");
+        }
+
+        sanMove.append(toCoord);
+
+        if (promotionCode != 0) {
+            sanMove.append("=");
+            sanMove.append(Character.toUpperCase(getPromotionChar(promotionCode)));
+        }
+
+        return sanMove.toString();
+    }
+
+    private char getPromotionChar(byte code) {
+        switch (code) {
+            case 2: return 'n';
+            case 3: return 'b';
+            case 5: return 'r';
+            case 9: return 'q';
+            default: return 'q';
+        }
+    }
+
+    private String generatePgn() {
+        StringBuilder pgn = new StringBuilder();
+
+        pgn.append("[Event \"Local Game\"]\n");
+        pgn.append("[Site \"Android App\"]\n");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy.MM.dd", Locale.getDefault());
+        pgn.append("[Date \"").append(dateFormat.format(new Date())).append("\"]\n");
+        pgn.append("[Round \"-\"]\n");
+        pgn.append("[White \"White Player\"]\n");
+        pgn.append("[Black \"Black Player\"]\n");
+        pgn.append("[Result \"*\"]\n\n");
+
+        int moveNum = 1;
+        for (int i = 0; i < chessEngine.history.size(); ) {
+            byte[] currentMove = chessEngine.history.get(i);
+            byte figureForMove = currentMove[0];
+
+            boolean isCastlingMove = false;
+            if (Math.abs(figureForMove) == 8 && Math.abs(currentMove[2] - currentMove[4]) == 2) {
+                if (currentMove[2] == 4 && currentMove[4] == 6) {
+                    isCastlingMove = true;
+                    if (i % 2 == 0) {
+                        pgn.append(moveNum).append(". ");
+                    }
+                    pgn.append("O-O");
+                    i += 1;
+                } else if (currentMove[2] == 4 && currentMove[4] == 2) {
+                    isCastlingMove = true;
+                    if (i % 2 == 0) {
+                        pgn.append(moveNum).append(". ");
+                    }
+                    pgn.append("O-O-O");
+                    i += 1;
+                }
+            }
+
+            if (!isCastlingMove) {
+                if (i % 2 == 0) {
+                    pgn.append(moveNum).append(". ");
+                    pgn.append(convertMoveToSan(currentMove));
+                } else {
+                    pgn.append(convertMoveToSan(currentMove));
+                }
+                i++;
+            }
+
+            if ((!isCastlingMove && i % 2 == 0) || (isCastlingMove && i % 2 == 0) || i == chessEngine.history.size()) {
+                pgn.append("\n");
+                moveNum++;
+            } else {
+                pgn.append(" ");
+            }
+        }
+
+        pgn.append("*\n");
+        return pgn.toString();
+    }
+
+    private void startAnalyseActivity() {
+        String pgn = generatePgn();
+
+        android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+        android.content.ClipData clip = android.content.ClipData.newPlainText("PGN", pgn);
+        clipboard.setPrimaryClip(clip);
+
+        Toast.makeText(this, "PGN скопирован в буфер обмена!", Toast.LENGTH_LONG).show();
+    }
+
     @Override
     public void toggleButtons() {
         if (chessEngine.history.isEmpty()) {
@@ -220,6 +357,8 @@ public class ChessBoard extends AppCompatActivity implements ChessEngine.ChessEn
             int multiplier = (int) opt[1];
 
             btn.setOnClickListener(v -> {
+                byte[] lastMoveRecord = chessEngine.history.get(chessEngine.history.size() - 1);
+                lastMoveRecord[6] = (byte) multiplier;
                 chessEngine.board[y1][x1] = (byte) (multiplier * chessEngine.isNeg(chessEngine.board[y1][x1]));
                 updateCell(y1, x1);
                 chessEngine.drawOrMateCheck();
